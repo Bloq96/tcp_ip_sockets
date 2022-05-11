@@ -64,6 +64,11 @@ int main(int argc, char *argv[]) {
         }
         printf("connectTo: Sending data.\n");
         send(socketId, buffer.data, buffer.length+1, 0);
+        printf("connectTo: Receiving data.\n");
+        buffer.length = recv(socketId, buffer.data,
+        sizeof(buffer.data), 0);
+        printf("connectTo: Server (%s:%d) says: %s\n", hostIP,
+        SERVER_PORT, buffer.data);
     }
     shutdown(socketId, SHUT_RDWR);
     close(socketId);
