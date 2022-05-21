@@ -85,7 +85,6 @@ int main(int argc, char *argv[]) {
             printf("streamServer: Client (%s:%d) says: %s\n",
             addressString, ntohs(clientAddress.sin_port),
             buffer.data);
-            printf("%s\n", buffer.data); 
             buffer.length = recv(connectionSocketId, buffer.data,
             sizeof(buffer.data), 0);
             if(breakProcess) break;

@@ -58,8 +58,11 @@ int main(int argc, char *argv[]) {
     while(1) {
         printf("connectTo: Type message.\n");
         buffer.length = readLine(buffer.data,BUFFER_SIZE);
-        if(compareStrings((char *)buffer.data, "END", buffer.length)
-        ==0) {
+        while(buffer.length<0) {
+            buffer.length = readLine(buffer.data,BUFFER_SIZE);
+        }
+        if(buffer.length&&compareStrings((char *)buffer.data, "END",
+        buffer.length)==0) {
             break;
         }
         printf("connectTo: Sending data.\n");

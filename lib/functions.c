@@ -16,8 +16,10 @@ int compareStrings(char *string1, char *string2, int length) {
 int readLine(char *buffer, int max_length) {
     int it;
     for(it=0;it<max_length-1;++it) {
-        scanf("%c",&buffer[it]);
-        if(buffer[it]=='\n') {
+        if(scanf("%c",&buffer[it])==EOF) {
+            buffer[it] = '\0';
+            return it?it:-1;
+        } else if(buffer[it]=='\n') {
             break;
         }
     }
