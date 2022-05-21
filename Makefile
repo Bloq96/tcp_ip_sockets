@@ -1,6 +1,9 @@
-.PHONY: compile link run clean
+.PHONY: config compile link run clean
 
 all: compile link
+
+config:
+	mkdir obj bin
 
 clean:   
 	rm obj/* bin/*
