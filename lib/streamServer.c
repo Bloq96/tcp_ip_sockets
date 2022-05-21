@@ -65,7 +65,6 @@ int main(int argc, char *argv[]) {
     unsigned int clientAddressLength = sizeof(clientAddress);
     time_t myTime;
     struct tm * timeInfo; 
-    time(&myTime);
 
     while(!breakProcess) {
         printf("streamServer: Accepting connections.\n");
@@ -86,6 +85,7 @@ int main(int argc, char *argv[]) {
         sizeof(buffer.data), 0);
         if(breakProcess) break;
         while(buffer.length) {
+            time(&myTime);
             timeInfo = localtime(&myTime);
             printf(
             "streamServer: Client (%s:%d) says: %s (%d:%d:%d)\n",
