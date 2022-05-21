@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "structures.h"
@@ -62,6 +63,10 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in clientAddress;
     struct Buffer buffer;
     unsigned int clientAddressLength = sizeof(clientAddress);
+    time_t myTime;
+    struct tm * timeInfo; 
+    time(&myTime);
+    timeInfo = localtime(&myTime);
 
     while(!breakProcess) {
         printf("streamServer: Accepting connections.\n");
@@ -82,9 +87,11 @@ int main(int argc, char *argv[]) {
         sizeof(buffer.data), 0);
         if(breakProcess) break;
         while(buffer.length) {
-            printf("streamServer: Client (%s:%d) says: %s\n",
+            printf(
+            "streamServer: Client (%s:%d) says: %s\n (%d:%d:%d)",
             addressString, ntohs(clientAddress.sin_port),
-            buffer.data);
+            buffer.data,timeInfo->tm_hour,timeInfo->tm_min,
+            timeInfo->tm_sec);
             buffer.length = recv(connectionSocketId, buffer.data,
             sizeof(buffer.data), 0);
             if(breakProcess) break;
