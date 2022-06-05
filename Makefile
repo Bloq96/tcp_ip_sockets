@@ -9,7 +9,7 @@ clean:
 	rm obj/* bin/*
 
 compile:
-	gcc -g -Wall -c -Iinclude lib/*
+	gcc -g -Wall -c -Iinclude src/*
 	mv *.o obj
 
 link:
