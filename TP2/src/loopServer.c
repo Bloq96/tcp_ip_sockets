@@ -181,6 +181,24 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    struct timeval timeout;
+
+    timeout.tv_sec = 5;  /* 5 Secs Timeout */
+
+    if(setsockopt(socketId, SOL_SOCKET, SO_RCVTIMEO,
+    (struct timeval *)&timeout, sizeof(struct timeval))<0) {
+        printf("Could not set receive timeout option.\n");
+        close(socketId);
+        return 1;
+    }
+
+    if(setsockopt(socketId, SOL_SOCKET, SO_SNDTIMEO,
+    (struct timeval *)&timeout, sizeof(struct timeval))<0) {
+        printf("Could not set send timeout option.\n");
+        close(socketId);
+        return 1;
+    }
+
     struct sigaction sigIntHandler;
 
     sigIntHandler.sa_handler = signalHandler;
@@ -194,21 +212,33 @@ int main(int argc, char *argv[]) {
     unsigned int clientAddressLength = sizeof(clientAddress);
     int lengths[44];
     zeroFill((char *)lengths, sizeof(lengths));
+    int errors = 0;
 
     while(!breakProcess) {
         buffer.length = recvfrom(socketId, buffer.data,
         sizeof(buffer.data), 0, (struct sockaddr *)&clientAddress,
         &clientAddressLength);
         if(breakProcess) break;
+        if(buffer.length<0) {
+            ++errors;
+            continue;
+        }
         while(buffer.length) {
             updateValues(lengths,stringLength(buffer.data)+1);
-            sendto(socketId, buffer.data, buffer.length, 0,
-            (struct sockaddr *)&clientAddress, sizeof(clientAddress));
+            if(sendto(socketId, buffer.data, buffer.length, 0,
+            (struct sockaddr *)&clientAddress, sizeof(clientAddress))<0) {
+                ++errors;
+                continue;
+            }
             if(breakProcess) break;
             buffer.length = recvfrom(socketId, buffer.data,
             sizeof(buffer.data), 0, (struct sockaddr *)&clientAddress,
             &clientAddressLength);
             if(breakProcess) break;
+            if(buffer.length<0) {
+                ++errors;
+                continue;
+            }
         }
     }
     int values[43] = {1, 100, 200, 300, 400, 500, 600, 700, 800, 900,
@@ -220,7 +250,7 @@ int main(int argc, char *argv[]) {
     for(int it=0;it<43;++it) {
         printf("%d: %d\n", values[it], lengths[it]);
     }
-    printf("Error: %d\n", lengths[43]);
+    printf("Errors: %d\n", lengths[43]+errors);
 
     close(socketId);
 }

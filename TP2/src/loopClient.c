@@ -33,6 +33,24 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    struct timeval timeout;
+
+    timeout.tv_sec = 5;  /* 5 Secs Timeout */
+
+    if(setsockopt(socketId, SOL_SOCKET, SO_RCVTIMEO,
+    (struct timeval *)&timeout, sizeof(struct timeval))<0) {
+        printf("Could not set receive timeout option.\n");
+        close(socketId);
+        return 1;
+    }
+
+    if(setsockopt(socketId, SOL_SOCKET, SO_SNDTIMEO,
+    (struct timeval *)&timeout, sizeof(struct timeval))<0) {
+        printf("Could not set send timeout option.\n");
+        close(socketId);
+        return 1;
+    }
+
     struct sockaddr_in serverAddress;
 
     // IPv4
@@ -59,18 +77,31 @@ int main(int argc, char *argv[]) {
     struct timespec startTime, endTime;
     long long unsigned int latency[43];
     zeroFill((char *)latency, sizeof(latency));
+    int errors = 0;
 
     fprintf(outputFile,"Data (bytes),Latency (ns),Troughput (bps)\n");
-    for(int it=0;it<43;++it) {
+    for(int it=42;it<43;++it) {
         buffer.data[values[it]-1] = '\0';
         for(times = 0; times<ATTEMPTS; ++times) {
             clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
-            sendto(socketId, buffer.data, values[it], 0,
-            (struct sockaddr *)&serverAddress, sizeof(serverAddress));
+            if(sendto(socketId, buffer.data, values[it], 0,
+            (struct sockaddr *)&serverAddress, sizeof(serverAddress))<0) {
+                --times;
+                ++errors;
+                printf("e");
+                continue; 
+            }
             buffer.length = recvfrom(socketId, buffer.data,
             sizeof(buffer.data), 0, (struct sockaddr *)&serverAddress,
             &serverAddressLength);
+            if(buffer.length<0) {
+                --times;
+                ++errors;
+                printf("e");
+                continue;
+            }
             clock_gettime(CLOCK_MONOTONIC_RAW, &endTime);
+            printf(".");
             latency[it] += 1000000000*(endTime.tv_sec-
             startTime.tv_sec)+(endTime.tv_nsec-startTime.tv_nsec);
         }
@@ -80,6 +111,7 @@ int main(int argc, char *argv[]) {
         (8.0*((double)values[it]))/
         (((double)latency[it])/1000000000.0));
     }
+    printf("\nErrors: %d\n", errors);
     fclose(outputFile);
     close(socketId);
 }
