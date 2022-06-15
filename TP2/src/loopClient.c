@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
     struct timeval timeout;
 
-    timeout.tv_sec = 5;  /* 5 Secs Timeout */
+    timeout.tv_sec = 3;  /* 3 Secs Timeout */
 
     if(setsockopt(socketId, SOL_SOCKET, SO_RCVTIMEO,
     (struct timeval *)&timeout, sizeof(struct timeval))<0) {
@@ -84,17 +84,12 @@ int main(int argc, char *argv[]) {
         buffer.data[values[it]-1] = '\0';
         for(times = 0; times<ATTEMPTS; ++times) {
             clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
-            if(sendto(socketId, buffer.data, values[it], 0,
-            (struct sockaddr *)&serverAddress, sizeof(serverAddress))<0) {
-                --times;
-                ++errors;
-                printf("e");
-                continue; 
-            }
+            sendto(socketId, buffer.data, values[it], 0,
+            (struct sockaddr *)&serverAddress, sizeof(serverAddress));
             buffer.length = recvfrom(socketId, buffer.data,
             sizeof(buffer.data), 0, (struct sockaddr *)&serverAddress,
             &serverAddressLength);
-            if(buffer.length<0) {
+            if(buffer.length<values[it]) {
                 --times;
                 ++errors;
                 printf("e");

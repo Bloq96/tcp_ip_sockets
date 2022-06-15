@@ -212,34 +212,15 @@ int main(int argc, char *argv[]) {
     unsigned int clientAddressLength = sizeof(clientAddress);
     int lengths[44];
     zeroFill((char *)lengths, sizeof(lengths));
-    int errors = 0;
 
     while(!breakProcess) {
+        updateValues(lengths,stringLength(buffer.data)+1);
         buffer.length = recvfrom(socketId, buffer.data,
         sizeof(buffer.data), 0, (struct sockaddr *)&clientAddress,
         &clientAddressLength);
         if(breakProcess) break;
-        if(buffer.length<0) {
-            ++errors;
-            continue;
-        }
-        while(buffer.length) {
-            updateValues(lengths,stringLength(buffer.data)+1);
-            if(sendto(socketId, buffer.data, buffer.length, 0,
-            (struct sockaddr *)&clientAddress, sizeof(clientAddress))<0) {
-                ++errors;
-                continue;
-            }
-            if(breakProcess) break;
-            buffer.length = recvfrom(socketId, buffer.data,
-            sizeof(buffer.data), 0, (struct sockaddr *)&clientAddress,
-            &clientAddressLength);
-            if(breakProcess) break;
-            if(buffer.length<0) {
-                ++errors;
-                continue;
-            }
-        }
+        sendto(socketId, buffer.data, buffer.length, 0,
+        (struct sockaddr *)&clientAddress, sizeof(clientAddress));
     }
     int values[43] = {1, 100, 200, 300, 400, 500, 600, 700, 800, 900,
     1000, 1024, 2048, 3072, 4096, 5120, 6144, 7168, 8192, 9216,
@@ -250,7 +231,7 @@ int main(int argc, char *argv[]) {
     for(int it=0;it<43;++it) {
         printf("%d: %d\n", values[it], lengths[it]);
     }
-    printf("Errors: %d\n", lengths[43]+errors);
+    printf("Errors: %d\n", lengths[43]);
 
     close(socketId);
 }
