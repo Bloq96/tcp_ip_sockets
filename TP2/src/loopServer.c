@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -181,23 +182,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    struct timeval timeout;
+    struct pollfd pollId;
 
-    timeout.tv_sec = 5;  /* 5 Secs Timeout */
-
-    if(setsockopt(socketId, SOL_SOCKET, SO_RCVTIMEO,
-    (struct timeval *)&timeout, sizeof(struct timeval))<0) {
-        printf("Could not set receive timeout option.\n");
-        close(socketId);
-        return 1;
-    }
-
-    if(setsockopt(socketId, SOL_SOCKET, SO_SNDTIMEO,
-    (struct timeval *)&timeout, sizeof(struct timeval))<0) {
-        printf("Could not set send timeout option.\n");
-        close(socketId);
-        return 1;
-    }
+    pollId.fd = socketId;
+    pollId.events = POLLIN;
 
     struct sigaction sigIntHandler;
 
@@ -212,12 +200,23 @@ int main(int argc, char *argv[]) {
     unsigned int clientAddressLength = sizeof(clientAddress);
     int lengths[44];
     zeroFill((char *)lengths, sizeof(lengths));
+    int errors = 0;
 
     while(!breakProcess) {
         updateValues(lengths,stringLength(buffer.data)+1);
-        buffer.length = recvfrom(socketId, buffer.data,
-        sizeof(buffer.data), 0, (struct sockaddr *)&clientAddress,
-        &clientAddressLength);
+        if(poll(&pollId,1,1000)<0) {
+            printf("Poll error.\n");
+            close(socketId);
+            return 1;
+        }
+        if((pollId.revents&POLLIN)==POLLIN) { 
+            buffer.length = recvfrom(socketId, buffer.data,
+            sizeof(buffer.data), 0, (struct sockaddr *)&clientAddress,
+            &clientAddressLength);
+        } else {
+            ++errors;
+            continue;
+        }
         if(breakProcess) break;
         sendto(socketId, buffer.data, buffer.length, 0,
         (struct sockaddr *)&clientAddress, sizeof(clientAddress));
@@ -231,7 +230,7 @@ int main(int argc, char *argv[]) {
     for(int it=0;it<43;++it) {
         printf("%d: %d\n", values[it], lengths[it]);
     }
-    printf("Errors: %d\n", lengths[43]);
+    printf("Errors: %d\n", lengths[43]+errors);
 
     close(socketId);
 }

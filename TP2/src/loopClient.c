@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <poll.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -9,7 +10,7 @@
 #include "structures.h"
 
 #define SERVER_PORT 54321
-#define ATTEMPTS 100000
+#define ATTEMPTS 1000
 
 int main(int argc, char *argv[]) {
     char *hostIP;
@@ -33,24 +34,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    struct timeval timeout;
-
-    timeout.tv_sec = 3;  /* 3 Secs Timeout */
-
-    if(setsockopt(socketId, SOL_SOCKET, SO_RCVTIMEO,
-    (struct timeval *)&timeout, sizeof(struct timeval))<0) {
-        printf("Could not set receive timeout option.\n");
-        close(socketId);
-        return 1;
-    }
-
-    if(setsockopt(socketId, SOL_SOCKET, SO_SNDTIMEO,
-    (struct timeval *)&timeout, sizeof(struct timeval))<0) {
-        printf("Could not set send timeout option.\n");
-        close(socketId);
-        return 1;
-    }
-
     struct sockaddr_in serverAddress;
 
     // IPv4
@@ -64,6 +47,11 @@ int main(int argc, char *argv[]) {
     zeroFill((char *)&serverAddress.sin_zero,
     sizeof(serverAddress.sin_zero));
 
+    struct pollfd pollId;
+
+    pollId.fd = socketId;
+    pollId.events = POLLIN;
+    
     FILE *outputFile = fopen("output.csv","w");
     struct Buffer buffer;
     charFill(buffer.data, BUFFER_SIZE, 'Z');
@@ -83,20 +71,28 @@ int main(int argc, char *argv[]) {
     for(int it=42;it<43;++it) {
         buffer.data[values[it]-1] = '\0';
         for(times = 0; times<ATTEMPTS; ++times) {
+            if(poll(&pollId,1,1000)<0) {
+                printf("Poll error.\n");
+                fclose(outputFile);
+                close(socketId);
+                return 1;
+            }
             clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
             sendto(socketId, buffer.data, values[it], 0,
             (struct sockaddr *)&serverAddress, sizeof(serverAddress));
-            buffer.length = recvfrom(socketId, buffer.data,
-            sizeof(buffer.data), 0, (struct sockaddr *)&serverAddress,
-            &serverAddressLength);
-            if(buffer.length<values[it]) {
+            if((pollId.revents&POLLIN)==POLLIN) { 
+                buffer.length = recvfrom(socketId, buffer.data,
+                sizeof(buffer.data), 0,
+                (struct sockaddr *)&serverAddress,
+                &serverAddressLength);
+            } else {
                 --times;
                 ++errors;
-                printf("e");
+                printf("Error!\n");
                 continue;
             }
             clock_gettime(CLOCK_MONOTONIC_RAW, &endTime);
-            printf(".");
+            printf("%d - %d\n",it,times);
             latency[it] += 1000000000*(endTime.tv_sec-
             startTime.tv_sec)+(endTime.tv_nsec-startTime.tv_nsec);
         }
