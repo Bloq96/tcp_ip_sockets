@@ -9,8 +9,6 @@
 #include "functions.h"
 #include "structures.h"
 
-#define SERVER_PORT 54321
-
 int breakProcess = 0;
 
 void updateValues(int *values, int length) {
@@ -213,12 +211,12 @@ int main(int argc, char *argv[]) {
             buffer.length = recvfrom(socketId, buffer.data,
             sizeof(buffer.data), 0, (struct sockaddr *)&clientAddress,
             &clientAddressLength);
-            updateValues(lengths, stringLength(buffer.data)+1);
-            if(breakProcess) break;
         } else {
             ++errors;
             continue;
         }
+        if(breakProcess) break;
+        updateValues(lengths, buffer.length);//stringLength(buffer.data)+1);
         sendto(socketId, buffer.data, buffer.length, 0,
         (struct sockaddr *)&clientAddress, sizeof(clientAddress));
     }
@@ -231,8 +229,7 @@ int main(int argc, char *argv[]) {
     for(int it=0;it<43;++it) {
         printf("%d: %d\n", values[it], lengths[it]);
     }
-    printf("Errors: %d + %d (%d)\n", lengths[43], errors,
-    lengths[43]+errors);
+    printf("Errors: %d + %d\n", lengths[43], errors);
 
     close(socketId);
 }
