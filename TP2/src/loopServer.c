@@ -203,8 +203,8 @@ int main(int argc, char *argv[]) {
     int errors = 0;
 
     while(!breakProcess) {
-        updateValues(lengths,stringLength(buffer.data)+1);
         if(poll(&pollId,1,1000)<0) {
+            if(breakProcess) break;
             printf("Poll error.\n");
             close(socketId);
             return 1;
@@ -213,11 +213,12 @@ int main(int argc, char *argv[]) {
             buffer.length = recvfrom(socketId, buffer.data,
             sizeof(buffer.data), 0, (struct sockaddr *)&clientAddress,
             &clientAddressLength);
+            updateValues(lengths, stringLength(buffer.data)+1);
+            if(breakProcess) break;
         } else {
             ++errors;
             continue;
         }
-        if(breakProcess) break;
         sendto(socketId, buffer.data, buffer.length, 0,
         (struct sockaddr *)&clientAddress, sizeof(clientAddress));
     }
@@ -230,7 +231,8 @@ int main(int argc, char *argv[]) {
     for(int it=0;it<43;++it) {
         printf("%d: %d\n", values[it], lengths[it]);
     }
-    printf("Errors: %d\n", lengths[43]+errors);
+    printf("Errors: %d + %d (%d)\n", lengths[43], errors,
+    lengths[43]+errors);
 
     close(socketId);
 }

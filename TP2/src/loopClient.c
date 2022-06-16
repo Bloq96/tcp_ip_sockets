@@ -10,7 +10,7 @@
 #include "structures.h"
 
 #define SERVER_PORT 54321
-#define ATTEMPTS 1000
+#define ATTEMPTS 100
 
 int main(int argc, char *argv[]) {
     char *hostIP;
@@ -53,8 +53,9 @@ int main(int argc, char *argv[]) {
     pollId.events = POLLIN;
     
     FILE *outputFile = fopen("output.csv","w");
-    struct Buffer buffer;
-    charFill(buffer.data, BUFFER_SIZE, 'Z');
+    struct Buffer input, output;
+    char error[7] = {'E', 'r', 'r', 'o', 'r', '!', '\0'};
+    charFill(output.data, BUFFER_SIZE, 'Z');
     unsigned int serverAddressLength = sizeof(serverAddress);
     int values[43] = {1, 100, 200, 300, 400, 500, 600, 700, 800, 900,
     1000, 1024, 2048, 3072, 4096, 5120, 6144, 7168, 8192, 9216,
@@ -66,10 +67,12 @@ int main(int argc, char *argv[]) {
     long long unsigned int latency[43];
     zeroFill((char *)latency, sizeof(latency));
     int errors = 0;
+    short retry = 0;
 
     fprintf(outputFile,"Data (bytes),Latency (ns),Troughput (bps)\n");
-    for(int it=42;it<43;++it) {
-        buffer.data[values[it]-1] = '\0';
+    for(int it=0;it<43;++it) {
+        output.length = values[it]-1;
+        output.data[output.length] = '\0';
         for(times = 0; times<ATTEMPTS; ++times) {
             if(poll(&pollId,1,1000)<0) {
                 printf("Poll error.\n");
@@ -77,17 +80,26 @@ int main(int argc, char *argv[]) {
                 close(socketId);
                 return 1;
             }
-            clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
-            sendto(socketId, buffer.data, values[it], 0,
-            (struct sockaddr *)&serverAddress, sizeof(serverAddress));
+            if(!retry) {
+                clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
+                sendto(socketId, output.data, values[it], 0,
+                (struct sockaddr *)&serverAddress,
+                sizeof(serverAddress));
+            } else {
+                sendto(socketId, error, 7, 0,
+                (struct sockaddr *)&serverAddress,
+                sizeof(serverAddress));
+                retry = 0;
+            }
             if((pollId.revents&POLLIN)==POLLIN) { 
-                buffer.length = recvfrom(socketId, buffer.data,
-                sizeof(buffer.data), 0,
+                input.length = recvfrom(socketId, input.data,
+                sizeof(input.data), 0,
                 (struct sockaddr *)&serverAddress,
                 &serverAddressLength);
             } else {
                 --times;
                 ++errors;
+                retry = 1;
                 printf("Error!\n");
                 continue;
             }
@@ -97,7 +109,7 @@ int main(int argc, char *argv[]) {
             startTime.tv_sec)+(endTime.tv_nsec-startTime.tv_nsec);
         }
         latency[it] /= ATTEMPTS;
-        buffer.data[buffer.length-1] = 'Z';
+        output.data[output.length] = 'Z';
         fprintf(outputFile,"%d,%lld,%g\n", values[it], latency[it],
         (8.0*((double)values[it]))/
         (((double)latency[it])/1000000000.0));
