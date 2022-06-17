@@ -5,6 +5,8 @@ int charFill(char *array, int positions, char character);
 
 int compareStrings(char *string1, char *string2, int length);
 
+int progressBar(int current, char *bar, int size);
+
 int readLine(char *buffer, int max_length);
 
 int stringLength(char *string);

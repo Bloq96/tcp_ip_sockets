@@ -25,6 +25,30 @@ int compareStrings(char *string1, char *string2, int length) {
     return 0; 
 }
 
+int progressBar(int current, char *bar, int size) {
+    if(current>100||current<0||bar==NULL||size>100||size<1) {
+        return 1;
+    }
+    int step = (int)(100.0/((float)(size-1)));
+    int it, it2 = 0;
+    for(it=0;it<current;it+=step) {
+        if(it2>=(size-1)) {
+            break;
+        }
+        bar[it2] = '#';
+        ++it2;    
+    }
+    for(;it<100;it+=step) {
+        if(it2>=(size-1)) {
+            break;
+        }
+        bar[it2] = ' ';
+        ++it2;    
+    }
+    bar[it2] = '\0';
+    return 0;
+}
+
 int readLine(char *buffer, int max_length) {
     int it;
     for(it=0;it<max_length-1;++it) {

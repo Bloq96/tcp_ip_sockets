@@ -9,7 +9,7 @@
 #include "functions.h"
 #include "structures.h"
 
-#define ATTEMPTS 1000
+#define ATTEMPTS 100
 
 int main(int argc, char *argv[]) {
     char *hostIP;
@@ -65,11 +65,15 @@ int main(int argc, char *argv[]) {
     long long unsigned int latency[43];
     zeroFill((char *)latency, sizeof(latency));
     int errors = 0;
+    int progress = 0;
+    char bar[21];
+    progressBar(progress, bar, sizeof(bar));
 
     fprintf(outputFile,"Data (bytes),Latency (ns),Troughput (bps)\n");
     for(int it=0;it<43;++it) {
         output.length = values[it]-1;
         output.data[output.length] = '\0';
+        errors = 0;
         for(times = 0; times<ATTEMPTS; ++times) {
             clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
             sendto(socketId, output.data, values[it], 0,
@@ -88,27 +92,35 @@ int main(int argc, char *argv[]) {
             } else {
                 --times;
                 ++errors;
-                printf("Error!\n");
+                printf("\r%d: [%s] (%d%%) E: %d", it, bar, progress,
+                errors);
+                fflush(stdout);
                 continue;
             }
             clock_gettime(CLOCK_MONOTONIC_RAW, &endTime);
             if(input.length!=values[it]) {
                 --times;
                 ++errors;
-                printf("Error!\n");
+                printf("\r%d: [%s] (%d%%) E: %d", it, bar, progress,
+                errors);
+                fflush(stdout);
                 continue;
             }
-            printf("%d - %d\n", it, times);
+            progress = ((times+1)*100)/ATTEMPTS;
+            progressBar(progress, bar, sizeof(bar));
+            printf("\r%d: [%s] (%d%%) E: %d", it, bar, progress,
+            errors);
+            fflush(stdout);
             latency[it] += 1000000000*(endTime.tv_sec-
             startTime.tv_sec)+(endTime.tv_nsec-startTime.tv_nsec);
         }
+        printf("\n");
         latency[it] /= times;
         output.data[output.length] = 'Z';
         fprintf(outputFile,"%d,%lld,%g\n", values[it], latency[it],
         (8.0*((double)values[it]))/
         (((double)latency[it])/1000000000.0));
     }
-    printf("\nErrors: %d\n", errors);
     fclose(outputFile);
     close(socketId);
 }
