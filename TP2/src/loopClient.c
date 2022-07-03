@@ -9,7 +9,7 @@
 #include "functions.h"
 #include "structures.h"
 
-#define ATTEMPTS 100
+#define ATTEMPTS 10000
 
 int main(int argc, char *argv[]) {
     char *hostIP;
@@ -92,8 +92,8 @@ int main(int argc, char *argv[]) {
             } else {
                 --times;
                 ++errors;
-                printf("\r%d: [%s] (%d%%) E: %d", it, bar, progress,
-                errors);
+                printf("\r%d: [%s] (%d%%) E: %d", values[it], bar,
+                progress, errors);
                 fflush(stdout);
                 continue;
             }
@@ -101,15 +101,15 @@ int main(int argc, char *argv[]) {
             if(input.length!=values[it]) {
                 --times;
                 ++errors;
-                printf("\r%d: [%s] (%d%%) E: %d", it, bar, progress,
-                errors);
+                printf("\r%d: [%s] (%d%%) E: %d", values[it], bar,
+                progress, errors);
                 fflush(stdout);
                 continue;
             }
             progress = ((times+1)*100)/ATTEMPTS;
             progressBar(progress, bar, sizeof(bar));
-            printf("\r%d: [%s] (%d%%) E: %d", it, bar, progress,
-            errors);
+            printf("\r%d: [%s] (%d%%) E: %d", values[it], bar,
+            progress, errors);
             fflush(stdout);
             latency[it] += 1000000000*(endTime.tv_sec-
             startTime.tv_sec)+(endTime.tv_nsec-startTime.tv_nsec);
