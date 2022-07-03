@@ -9,13 +9,16 @@
 #include "functions.h"
 #include "structures.h"
 
-#define ATTEMPTS 10000
+#define ATTEMPTS 100000
 
 int main(int argc, char *argv[]) {
     char *hostIP;
 
+    //Checks if destination is specified
     if(argc>1) {
         hostIP = argv[1];
+
+        //Checks if address format is valid
         if(validIPv4(hostIP,stringLength(hostIP))!=1) {
             printf("Invalid IP format.\n");
             return 1;
@@ -27,6 +30,7 @@ int main(int argc, char *argv[]) {
 
     int socketId;
     
+    //Creates a datagram socket
     socketId = socket(AF_INET, SOCK_DGRAM, 0);
     if(socketId < 0) {
         printf("Could not open socket.\n");
@@ -35,6 +39,7 @@ int main(int argc, char *argv[]) {
 
     struct sockaddr_in serverAddress;
 
+    //Specifies server address
     // IPv4
     serverAddress.sin_family = AF_INET;
     // IPv4 address
@@ -74,8 +79,14 @@ int main(int argc, char *argv[]) {
         output.length = values[it]-1;
         output.data[output.length] = '\0';
         errors = 0;
+
+        //Repeats 100 000 times
         for(times = 0; times<ATTEMPTS; ++times) {
+
+            //Get start time for the iteration
             clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
+
+            //Sends packet
             sendto(socketId, output.data, values[it], 0,
             (struct sockaddr *)&serverAddress, sizeof(serverAddress));
             if(poll(&pollId,1,1000)<0) {
@@ -84,11 +95,14 @@ int main(int argc, char *argv[]) {
                 close(socketId);
                 return 1;
             }
+            //Gets response
             if((pollId.revents&POLLIN)==POLLIN) { 
                 input.length = recvfrom(socketId, input.data,
                 sizeof(input.data), 0,
                 (struct sockaddr *)&serverAddress,
                 &serverAddressLength);
+            
+            //Error if timed out (1 s)
             } else {
                 --times;
                 ++errors;
@@ -97,6 +111,8 @@ int main(int argc, char *argv[]) {
                 fflush(stdout);
                 continue;
             }
+
+            //Gets end time for the iteration
             clock_gettime(CLOCK_MONOTONIC_RAW, &endTime);
             if(input.length!=values[it]) {
                 --times;
@@ -106,15 +122,21 @@ int main(int argc, char *argv[]) {
                 fflush(stdout);
                 continue;
             }
+
+            //Progress bar
             progress = ((times+1)*100)/ATTEMPTS;
             progressBar(progress, bar, sizeof(bar));
             printf("\r%d: [%s] (%d%%) E: %d", values[it], bar,
             progress, errors);
             fflush(stdout);
+
+            //Adds latency for the iteration
             latency[it] += 1000000000*(endTime.tv_sec-
             startTime.tv_sec)+(endTime.tv_nsec-startTime.tv_nsec);
         }
         printf("\n");
+
+        //Average latency for the 100 000 iterations
         latency[it] /= times;
         output.data[output.length] = 'Z';
         fprintf(outputFile,"%d,%lld,%g\n", values[it], latency[it],

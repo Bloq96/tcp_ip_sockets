@@ -19,8 +19,8 @@ def main():
         outputFile.write("-"*100+"\n\n");
         for destination in destinations:
             it = it + 1;
-            outputFile.write(str(it)+"º Destination: "+destination+
-            "\n\n");
+            outputFile.write("Destination: "+str(it)+": "+
+            destination+"\n\n");
             outputFile.write("-"*100+"\n");
             getRoutes(destination, outputFile);
             outputFile.write("-"*100+"\n\n");

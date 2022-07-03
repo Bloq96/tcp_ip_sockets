@@ -11,6 +11,7 @@
 
 int breakProcess = 0;
 
+//Updates the table that stores the number of packets received by size
 void updateValues(int *values, int length) {
     switch(length) {
         case 1:
@@ -148,12 +149,15 @@ void updateValues(int *values, int length) {
 
 }
 
+//Handler for SIGINT
 void signalHandler(int s) {
     printf("Caught signal %d\n",s);
     breakProcess = 1;
 }
 
 int main(int argc, char *argv[]) {
+
+    //Creates socket
     int socketId = socket(AF_INET, SOCK_DGRAM, 0);
     
     if(socketId < 0) {
@@ -173,6 +177,7 @@ int main(int argc, char *argv[]) {
     zeroFill((char *)&serverAddress.sin_zero,
     sizeof(serverAddress.sin_zero));
 
+    //Binds socket to machine address
     if(bind(socketId, (struct sockaddr *)&serverAddress,
     sizeof(serverAddress))<0) {
         printf("Could not enable socket.\n");
@@ -207,16 +212,26 @@ int main(int argc, char *argv[]) {
             close(socketId);
             return 1;
         }
+
+        //Gets message from client
         if((pollId.revents&POLLIN)==POLLIN) { 
             buffer.length = recvfrom(socketId, buffer.data,
             sizeof(buffer.data), 0, (struct sockaddr *)&clientAddress,
             &clientAddressLength);
+
+        //Error if timed out (1 s)
         } else {
             ++errors;
             continue;
         }
+
+        //Breaks loop if SIGINT caught
         if(breakProcess) break;
+
+        //Updates the table that stores the number of packets received by size
         updateValues(lengths, buffer.length);//stringLength(buffer.data)+1);
+
+        //Aswers client
         sendto(socketId, buffer.data, buffer.length, 0,
         (struct sockaddr *)&clientAddress, sizeof(clientAddress));
     }
